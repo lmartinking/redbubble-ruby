@@ -18,6 +18,9 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #++
 
+# TODO:
+#  * Add more in the way of error checking
+#  * Callbacks (?)
 
 require 'rubygems'
 require 'hpricot'
@@ -25,15 +28,67 @@ require 'open-uri'
 
 class Redbubble
 	@@domain = 'http://www.redbubble.com'
+	
 
 	def initialize(username)
-		@username = username
+		@user = User.new(username)
 
 		@shirts = []
 		@artworks = []
 	end
 
-	###
+	def user
+		@user
+	end
+
+	def Redbubble.domain
+		@@domain
+	end
+
+	class User
+		attr_accessor :username, :img_small, :img_medium, :name, :url
+
+		@@sml_sz = '45x45'
+		@@med_sz = '135x135'
+
+		def initialize(username)
+			@username = username
+			@img_small = ""
+			@img_medium = ""
+			@name = ""
+			@url = ""
+			@groups = []
+		end
+
+		def url
+			@url = "#{Redbubble.domain}/people/#{@username}"
+		end
+
+		def img_medium=(url)
+			@img_medium = url
+			img_small_refresh
+			@img_medium
+		end
+
+		def img_small_refresh
+			@img_small = @img_medium.gsub(@@med_sz, @@sml_sz)			
+			puts "img small: " + @img_small
+			@img_small
+		end
+
+		def extended_info_refresh
+			profile = Redbubble.fetch_page(url)
+
+			# grab the avatar img
+			profile.at("#avatar").search("img").each {
+				|avatar|
+				@name = avatar['alt']
+				self.img_medium = avatar['src'].to_s
+			}
+
+			#
+		end
+	end
 
 	class Item
 		attr_accessor :title, :img_small, :img_medium, :img_large, :url, :buy_url, :price, :tags
@@ -64,6 +119,7 @@ class Redbubble
 			puts "ImgLge: #{@img_large}"
 		end
 	end
+
 
 	class Shirt < Item
 		attr_accessor :color, :colors, :colors_rgb, :gender
@@ -104,6 +160,9 @@ class Redbubble
 			@img_small.include? @@nsfw_sml
 		end
 
+		#
+		# All the attributes after here require an extra page fetch!
+		#
 		def colors
 			if self.nsfw?
 				@colors
@@ -138,7 +197,7 @@ class Redbubble
 
 		def extended_info_refresh
 			url = @url
-			doc = Hpricot( open( url ) )
+			doc = Redbubble.fetch_page(url)
 
 			# get the buy link
 			doc.at("div#buy").search("a[@title=buy]").each { |a| @buy_url = a['href'].to_s }
@@ -172,6 +231,7 @@ class Redbubble
 		end
 	end
 
+
 	class Artwork < Item
 		def initialize()
 			super
@@ -179,6 +239,7 @@ class Redbubble
 	end
 
 	###
+
 
 	def init_shirts
 		pages = gather_pages('t-shirts')
@@ -221,23 +282,25 @@ class Redbubble
 		@artworks
 	end
 
-	private
-
 	def gather_pages(item_type)
-		url = "#{@@domain}/people/#{@username}/#{item_type}/everything"
+		url = "#{@@domain}/people/#{@user.username}/#{item_type}/everything"
 
 		docs = []
-		doc = Hpricot( open( url ) )
+		doc = Redbubble.fetch_page(url)
 		docs << doc
 
 		page_links = doc.search('//li[@class=page-link]')
 		page_links.map.each { |this|
 			u = this.at("a")['href'].to_s
 			u = @@domain + u
-			doc = Hpricot(open(u))
+			doc = Redbubble.fetch_page(u)
 			docs << doc
 		}
 
 		docs
+	end
+
+	def Redbubble.fetch_page(url)
+		Hpricot(open(url))
 	end
 end
