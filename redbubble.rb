@@ -29,7 +29,7 @@ require 'open-uri'
 
 class Redbubble
 	@@domain = 'http://www.redbubble.com'
-	
+	@@custom_fetch = nil
 
 	def initialize(username)
 		@user = User.new(username)
@@ -44,6 +44,10 @@ class Redbubble
 
 	def Redbubble.domain
 		@@domain
+	end
+
+	def custom_fetch=(func)
+		@@custom_fetch = func
 	end
 
 	class User
@@ -167,11 +171,15 @@ class Redbubble
 		end
 
 		def print_extra
-			puts "Prices: #{@price}"
+			puts "Prices: #{self.price}"
 			puts "Forms:  #{@forms}"
 			puts "Tags:   #{@tags.to_s}"
 			puts "Groups: #{@groups.to_s}"
 			puts "BuyUrl: #{@buy_url}"
+		end
+
+		def nsfw?
+			@img_small.include? @@nsfw_sml
 		end
 
 		def img_small=(url)
@@ -314,9 +322,6 @@ class Redbubble
 		end
 
 
-		def nsfw?
-			@img_small.include? @@nsfw_sml
-		end
 
 		#
 		# All the attributes after here require an extra page fetch!
@@ -456,6 +461,13 @@ class Redbubble
 	end
 
 	def Redbubble.fetch_page(url)
-		Hpricot(open(url))
+		if @@custom_fetch
+			puts "Calling custom fetch"
+			data = @@custom_fetch.call(url)	
+		else
+			data = open(url)
+		end
+
+		Hpricot(data)
 	end
 end
