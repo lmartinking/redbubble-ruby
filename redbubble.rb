@@ -137,7 +137,7 @@ class Redbubble
 
 
 	class Item
-		attr_accessor :title, :img_small, :img_medium, :img_large, :url, :buy_url, :price, :tags, :groups, :owner, :forms
+		attr_accessor :title, :img_small, :img_medium, :img_large, :url, :slug, :buy_url, :price, :tags, :groups, :owner, :forms 
 
 		@@nsfw_sml = 'nsfw_small.jpg'
 		@@nsfw_med = 'nsfw_medium.jpg'
@@ -151,6 +151,7 @@ class Redbubble
 			@img_medium = ""
 			@img_large = ""
 			@url = ""
+			@slug = ""
 			@buy_url = ""
 			@tags = []
 			@groups = UserGroups.new
@@ -176,6 +177,13 @@ class Redbubble
 			puts "Tags:   #{@tags.to_s}"
 			puts "Groups: #{@groups.to_s}"
 			puts "BuyUrl: #{@buy_url}"
+		end
+
+		def url=(new)
+			@url = new
+			r = @url.scan(/([0-9]+)-([0-9])-(.*)/)
+			@slug = r[0][2]
+			@url
 		end
 
 		def nsfw?
@@ -287,7 +295,7 @@ class Redbubble
 
 	# Class for Redbuble Clothing
 	class Shirt < Item
-		attr_accessor :color, :colors, :colors_rgb, :gender
+		attr_accessor :color, :colors, :colors_rgb, :gender, :img_shirt_small, :img_shirt_medium
 
 		@@sml_sz = '135x135' # Don't change
 		@@med_sz = '482x482' # ...or this!
@@ -301,6 +309,9 @@ class Redbubble
 			@gender = "mens"	# Default gender
 			@colors = []
 			@colors_rgb = []
+
+			@img_shirt_small = ""
+			@img_shirt_medium = ""
 		end
 
 		def img_small=(url)
@@ -308,12 +319,15 @@ class Redbubble
 			@color = @img_small.to_s.scan(/.*,(.*)\.jpg/)		
 			img_medium_refresh
 			img_large_refresh
+			img_shirt_small_refresh
+			img_shirt_medium_refresh
 			@img_small
 		end
 
 		def img_medium_refresh
 			# Our clever little dodad to figure out the larger size	
-			@img_medium = @img_small.gsub(/fc/,'ts').gsub(@@sml_sz,@@med_sz).gsub(/\.jpg$/,",#{@gender},#{@@bgcolor}.jpg").gsub(@@nsfw_sml, @@nsfw_med)	
+			#@img_medium = @img_small.gsub(/fc/,'ts').gsub(@@sml_sz,@@med_sz).gsub(/\.jpg$/,",#{@gender},#{@@bgcolor}.jpg").gsub(@@nsfw_sml, @@nsfw_med)	
+			@img_medium = @img_small.gsub('.fc,','.fig,').gsub(@@sml_sz,'').gsub(',,',',').gsub(/\.jpg$/,",#{@gender},#{@@bgcolor}.jpg").gsub(@@nsfw_sml, @@nsfw_med)	
 		end
 
 		def img_large_refresh
@@ -321,6 +335,13 @@ class Redbubble
 			@img_large = @img_small.gsub(@@sml_sz,@@lge_sz).gsub(@@nsfw_sml, @@nsfw_lge)
 		end
 
+		def img_shirt_small_refresh
+			@img_shirt_small = @img_small.gsub('.fc,','.ts,').gsub(@@sml_sz,'170x180').gsub(/\.jpg$/,",#{@gender},#{@@bgcolor}.jpg")
+		end
+
+		def img_shirt_medium_refresh
+			@img_shirt_medium = @img_shirt_small.gsub('170x180','482x482')
+		end
 
 
 		#
