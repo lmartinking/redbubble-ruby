@@ -462,7 +462,6 @@ class Redbubble
 
 	def Redbubble.fetch_page(url)
 		if @@custom_fetch
-			puts "Calling custom fetch"
 			data = @@custom_fetch.call(url)	
 		else
 			data = open(url)
