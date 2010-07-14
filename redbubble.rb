@@ -235,12 +235,15 @@ class Redbubble
 		def item_extended_info_refresh
 			url = @url
 			doc = Redbubble.fetch_page(url)
-			update_price(doc)
-			update_buy_url(doc)
-			update_tags(doc)
-			update_groups(doc)
-			update_forms(doc)
-			return doc
+
+			if (doc != false) then
+				update_price(doc)
+				update_buy_url(doc)
+				update_tags(doc)
+				update_groups(doc)
+				update_forms(doc)
+				return doc
+			end
 		end
 
 		def update_tags(doc)
@@ -265,31 +268,36 @@ class Redbubble
 
 		def update_buy_url(doc)
 			# get the buy link
-			doc.at("div#buy").search("a[@title=buy]").each { |a| @buy_url = a['href'].to_s }
+			doc.search("div#buy").each {
+				|e|
+				e.search("a[@title=buy]").each { |a| @buy_url = a['href'].to_s }
+			}
 		end
 
 		def update_price(doc)
 			# get the price
-			doc.at("div#buy").search("a").each {
-				|a|
-				price = a.inner_html.scan(/(.*[0-9]+\.[0-9]+)$/)
-
-				if price.empty?
-					next
-				end
-
-				@price << price[0][0].to_s.gsub('from ','')
+			doc.search("div#buy").each { 
+				|e|
+				e.search("span.price").each {
+					|p|
+					# TODO: store currency					
+					@price << p.to_plain_text
+				}
 			}
 		end
 
 		def update_forms(doc)
 			[ 'T-Shirt:', 'Card:', 'Print:' ].each {
 				|f|
-				result = doc.at("div#buy").inner_html.scan(f)
-				if not result.empty?
-					@forms << result[0].gsub(':','').downcase
-				end
-			}			
+				doc.search("div#buy").each {
+					|e|
+					result = e.inner_html.scan(f)
+					if not result.empty?
+						@forms << result[0].gsub(':','').downcase
+		            	have_forms = 1
+					end
+				}
+			}   
 		end
 	end
 
@@ -488,6 +496,12 @@ class Redbubble
 			data = open(url)
 		end
 
-		Hpricot(data)
+		doc = Hpricot(data)
+
+		if (doc.class != Hpricot::Doc) then
+			return false
+		else
+			return doc
+		end
 	end
 end
